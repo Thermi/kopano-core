@@ -1,2 +1,2 @@
 kopano
-bsddb3
+libmdbx

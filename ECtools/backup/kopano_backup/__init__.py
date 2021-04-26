@@ -18,7 +18,7 @@ try:
     import cPickle as pickle
 except ImportError:
     import _pickle as pickle
-import bsddb3 as bsddb
+import libmdbx
 
 from MAPI import (
     PT_UNICODE, PT_ERROR, KEEP_OPEN_READWRITE,
@@ -107,7 +107,7 @@ def fatal(s):
     sys.exit(1)
 
 def dbopen(path):
-    return bsddb.hashopen(path, 'c')
+    return libmdbx.Env(path)
 
 def _copy_folder_meta(from_dir, to_dir, keep_db=False):
     if not os.path.exists(to_dir):
@@ -864,11 +864,13 @@ def folder_struct(data_path, options, mapper=None): # XXX deprecate?
 
 def folder_deleted(data_path):
     if os.path.exists(data_path+'/index'):
-        with closing(bsddb.hashopen(data_path+'/index')) as db:
-           idx = db.get(b'folder')
-           if idx and pickle_loads(idx).get(b'backup_deleted'):
-               return pickle_loads(idx).get(b'backup_deleted')
-    return None
+        # implement usage as "with" and use it.
+        env=libmdbx.Env(data_path+'/index')
+        idx=env[b'folder']
+        if idx:
+            value= pickle_loads(idx).get(b'backup_deleted'):
+            if value:
+                return value
 
 def show_contents(data_path, options):
     """ summary of contents of backup directory, at the item or folder level, in CSV format """
@@ -893,7 +895,7 @@ def show_contents(data_path, options):
 
         # filter items on date using 'index' database
         if os.path.exists(data_path+'/index'):
-            with closing(bsddb.hashopen(data_path+'/index')) as db:
+            with closing(libmdbx.Env(data_path+'/index')) as db:
                 for key, value in db.items():
                     d = pickle_loads(value)
                     if ((key == b'folder') or

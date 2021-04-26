@@ -11,7 +11,7 @@ from multiprocessing import Queue, Value
 import time
 import sys
 
-import bsddb3 as bsddb
+import libmdbx
 from queue import Empty
 
 from kopano_search import plaintext
@@ -77,7 +77,7 @@ def db_get(db_path, key):
     """ get value from db file """
     if not isinstance(key, bytes):  # python3
         key = key.encode('ascii')
-    with closing(bsddb.hashopen(db_path, 'c')) as db:
+    with closing(libmdbx.Env(db_path)) as db:
         value = db.get(key)
         if value is not None:
             return db.get(key).decode('ascii')
@@ -88,7 +88,7 @@ def db_put(db_path, key, value):
         key = key.encode('ascii')
     with open(db_path+'.lock', 'w') as lockfile:
         fcntl.flock(lockfile.fileno(), fcntl.LOCK_EX)
-        with closing(bsddb.hashopen(db_path, 'c')) as db:
+        with closing(libmdbx.Env(db_path)) as db:
             db[key] = value
 
 class SearchWorker(kopano.Worker):
@@ -308,8 +308,8 @@ class Service(kopano.Service):
             worker.start()
         try:
             self.state = db_get(self.state_db, 'SERVER')
-        except bsddb.db.DBAccessError:
-            self.log.error("Cannot access '%s': permission denied", self.state_db)
+        except libmdbx.MDBXErrorExc as exc:
+            self.log.error("Cannot access '%s': %s", self.state_db, exc.message)
             sys.exit(1)
 
         if self.state:

@@ -8,7 +8,7 @@ import os
 import sys
 import time
 
-import bsddb3 as bsddb
+import libmdbx
 
 import kopano
 from kopano import Config, log_exc
@@ -53,13 +53,13 @@ class Importer:
     def mark_spam(self, searchkey):
         if not isinstance(searchkey, bytes): # python3
             searchkey = searchkey.encode('ascii')
-        with closing(bsddb.btopen(self.spamdb, 'c')) as db:
+        with closing(libmdbx.Env(self.spamdb)) as db:
             db[searchkey] = ''
 
     def was_spam(self, searchkey):
         if not isinstance(searchkey, bytes): # python3
             searchkey = searchkey.encode('ascii')
-        with closing(bsddb.btopen(self.spamdb, 'c')) as db:
+        with closing(libmdbx.Env(self.spamdb)) as db:
             return searchkey in db
 
     def update(self, item, flags):

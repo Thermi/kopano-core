@@ -9,7 +9,7 @@ import time
 import kopano
 from kopano.log import logger
 
-import bsddb3 as bsddb
+import libmdbx
 
 CONFIG = {
     "autorespond_cc": kopano.Config.boolean(default=False),
@@ -41,7 +41,7 @@ def send_ooo(server, username, msg, copy_to_sentmail):
 
 
 def check_time(senddb, timelimit, username, to):
-    with closing(bsddb.btopen(senddb, 'c')) as db:
+    with closing(libmdbx.Env(senddb)) as db:
         key = username + ":" + to
         key = key.encode('utf-8')
         if key in db:
@@ -52,7 +52,7 @@ def check_time(senddb, timelimit, username, to):
 
 
 def add_time(senddb, username, to):
-    with closing(bsddb.btopen(senddb, 'c')) as db:
+    with closing(libmdbx.Env(senddb)) as db:
         key = username + ":" + to
         key = key.encode('utf-8')
         db[key] = str(int(time.time()))
